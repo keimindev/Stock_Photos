@@ -3,39 +3,61 @@ import styled from 'styled-components'
 import {Search} from '@material-ui/icons';
 import Photo from './Photo'
 
-const clientID = `?client_id=MSuZdXVtSzJ0jGN3Ha5Ca00yo-6PhDpP_L_b4Mn1l0w`
+const clientID = `?client_id=${process.env.REACT_APP_ACCESS_KEY}`;
 const mainUrl = `https://api.unsplash.com/photos/`;
 const searchUrl = `https://api.unsplash.com/search/photos/`;
 
 function App() {
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState([]);
-
+  const [page, setPage] = useState(1);
+  const [query, setQuery] = useState('');
 
   const fetchImg = async() =>{
     setLoading(true)
     let url; 
-    url = `${mainUrl}${clientID}`
+    const urlPage = `&page=${page}`;
+    const urlQuery = `&query=${query}`;
+
+    if(query){
+      url = `${searchUrl}${clientID}${urlPage}${urlQuery}`
+    }
+    else{
+      //초기 data 값만 가져오는 것 
+      url = `${mainUrl}${clientID}${urlPage}`
+    }
+
     try{
       const response = await fetch(url);
       const data = await response.json()
-      setPhotos(data)
+      console.log(data)
+      setPhotos((oldPhotos) => {
+        if(query && page === 1){
+          return data.results
+        }else if(query){
+          return [...oldPhotos, ...data.results]
+        }else{
+          return [...oldPhotos, ...data]
+        }
+      })
       setLoading(false)
      }catch(error){
        setLoading(false)
-       console.log(error)
      }
   }
   
   useEffect(() => {
     fetchImg()
-  },[])
+  },[page])
+
 
   useEffect(() =>{
     const event = window.addEventListener('scroll', () => {
       if(!loading &&
         window.innerHeight + window.scrollY >= document.body.scrollHeight - 2){
-        console.log('it worked');
+        setPage( (oldPage) => {
+          return oldPage + 1
+        })
       }
     });
     return () => window.removeEventListener('scroll', event)
@@ -43,14 +65,18 @@ function App() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log('helloe') 
+    if(!query) return;
+    if(page === 1){
+      fetchImg();
+    }
+    setPage(1)
   }
 
   return (
     <Main>
       <SearchForm>
         <form className="search-form">
-          <input type="text" placeholder="search" className="form-input" />
+          <input type="text" placeholder="search" className="form-input" value={query} onChange={(e) => setQuery(e.target.value)} />
           <button type="submit" className="submit-btn" onClick={handleSubmit}><Search className="icon" /></button>
         </form>
       </SearchForm>
@@ -69,12 +95,12 @@ function App() {
 const Main = styled.div`
 width:1280px;
 margin : 0px auto;
-padding-top: 100px;
+padding-top: 50px;
 
 
 @media only screen and (max-width: 768px) {
   width: 100%;
-  }
+}
 
 `;
 
